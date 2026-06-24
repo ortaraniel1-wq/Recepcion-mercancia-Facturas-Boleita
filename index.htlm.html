@@ -1,0 +1,774 @@
+<!-- Recepción de Mercancía - herramienta móvil -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Recepción de Mercancía</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#eef0f2;
+    --panel:#ffffff;
+    --ink:#1d2227;
+    --muted:#6b7682;
+    --line:#dfe3e7;
+    --slate:#222a33;
+    --green:#1aa251;
+    --green-bg:#e3f6ea;
+    --red:#d83a36;
+    --red-bg:#fde6e5;
+    --amber:#d98a00;
+    --amber-bg:#fbf0d6;
+    --blue:#2563c9;
+    --shadow:0 1px 2px rgba(20,30,40,.08),0 4px 14px rgba(20,30,40,.06);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Barlow',system-ui,sans-serif;
+    font-size:16px;
+    padding-bottom:96px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:640px;margin:0 auto}
+
+  /* Header */
+  header{
+    background:var(--slate);
+    color:#fff;
+    padding:14px 16px 16px;
+    position:sticky;top:0;z-index:40;
+    box-shadow:0 4px 16px rgba(0,0,0,.18);
+  }
+  .htop{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .brand{font-family:'Barlow Semi Condensed';font-weight:800;letter-spacing:.04em;
+    text-transform:uppercase;font-size:15px;color:#9fb0c0}
+  .saved{font-size:12px;color:#8aa;opacity:0;transition:opacity .3s}
+  .saved.on{opacity:1;color:#79e6a4}
+  .ordno{
+    font-family:'Barlow Semi Condensed';font-weight:800;font-size:26px;
+    line-height:1.1;margin-top:4px;background:transparent;border:none;color:#fff;
+    width:100%;padding:2px 0;border-bottom:1px dashed rgba(255,255,255,.25)
+  }
+  .ordno:focus{outline:none;border-bottom-color:#79e6a4}
+  .odate{margin-top:6px;font-size:13px;color:#9fb0c0}
+  .odate input{background:transparent;border:none;color:#cfe;font-family:'Barlow';font-size:13px}
+
+  /* Summary */
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+  .stat{background:rgba(255,255,255,.08);border-radius:10px;padding:8px 6px;text-align:center}
+  .stat b{display:block;font-family:'Barlow Semi Condensed';font-weight:800;font-size:22px;line-height:1}
+  .stat span{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:#9fb0c0;margin-top:3px}
+  .stat.g b{color:#79e6a4}
+  .stat.r b{color:#ff8d88}
+  .stat.y b{color:#ffd166}
+
+  /* Controls bar */
+  .controls{padding:12px 12px 4px}
+  .search{position:relative}
+  .search input{
+    width:100%;padding:12px 14px 12px 40px;border:1px solid var(--line);border-radius:12px;
+    background:var(--panel);font-size:16px;font-family:'Barlow';box-shadow:var(--shadow)
+  }
+  .search input:focus{outline:none;border-color:var(--blue)}
+  .search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.5}
+  .chips{display:flex;gap:8px;overflow-x:auto;padding:12px 2px 4px;-ms-overflow-style:none;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:0 0 auto;border:1px solid var(--line);background:var(--panel);color:var(--muted);
+    padding:8px 14px;border-radius:999px;font-weight:600;font-size:14px;white-space:nowrap;cursor:pointer}
+  .chip .n{font-weight:700;margin-left:5px;opacity:.7}
+  .chip.active{background:var(--slate);color:#fff;border-color:var(--slate)}
+
+  /* List */
+  .list{padding:6px 12px}
+  .card{
+    background:var(--panel);border-radius:14px;box-shadow:var(--shadow);
+    margin-bottom:10px;overflow:hidden;border-left:5px solid var(--line)
+  }
+  .card.s-done{border-left-color:var(--green)}
+  .card.s-short{border-left-color:var(--red)}
+  .card.s-over{border-left-color:var(--amber)}
+  .card.s-pend{border-left-color:#c2cad2}
+  .cbody{padding:12px 14px}
+  .desc{font-weight:600;font-size:16px;line-height:1.25}
+  .meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:5px;font-size:12px;color:var(--muted)}
+  .meta code{font-family:'Barlow';background:#f1f3f5;border-radius:5px;padding:1px 6px;color:#444;font-size:12px}
+
+  .row2{display:flex;align-items:center;gap:10px;margin-top:12px}
+  .exp{flex:0 0 auto;text-align:center;min-width:58px}
+  .exp .lab{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  .exp .v{font-family:'Barlow Semi Condensed';font-weight:800;font-size:22px;line-height:1}
+
+  .stepper{display:flex;align-items:center;gap:0;flex:1;justify-content:center}
+  .stepper button{
+    width:46px;height:46px;border:1px solid var(--line);background:#fff;font-size:24px;
+    font-weight:700;color:var(--slate);cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center
+  }
+  .stepper button:active{background:#f1f3f5}
+  .stepper .minus{border-radius:12px 0 0 12px}
+  .stepper .plus{border-radius:0 12px 12px 0}
+  .stepper input{
+    width:64px;height:46px;text-align:center;border:1px solid var(--line);border-left:none;border-right:none;
+    font-family:'Barlow Semi Condensed';font-weight:800;font-size:22px;color:var(--ink);background:#fff
+  }
+  .stepper input:focus{outline:none;background:#fffdf3}
+  .stepper input.empty{color:#b8c0c8}
+
+  .done-btn{
+    flex:0 0 auto;height:46px;padding:0 14px;border-radius:12px;border:none;cursor:pointer;
+    font-family:'Barlow';font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px
+  }
+  .done-btn{background:var(--green-bg);color:var(--green)}
+  .done-btn:active{filter:brightness(.96)}
+
+  .badge{display:inline-flex;align-items:center;gap:6px;margin-top:11px;padding:5px 10px;border-radius:8px;
+    font-weight:700;font-size:13px}
+  .badge.done{background:var(--green-bg);color:var(--green)}
+  .badge.short{background:var(--red-bg);color:var(--red)}
+  .badge.over{background:var(--amber-bg);color:var(--amber)}
+  .badge.pend{background:#eef1f4;color:var(--muted)}
+
+  .obs{margin-top:10px}
+  .obs input{width:100%;border:1px dashed var(--line);border-radius:8px;padding:7px 10px;font-size:14px;
+    font-family:'Barlow';color:var(--ink);background:#fafbfc}
+  .obs input:focus{outline:none;border-color:var(--blue);border-style:solid}
+
+  .empty{text-align:center;color:var(--muted);padding:50px 20px}
+  .empty b{display:block;font-family:'Barlow Semi Condensed';font-size:20px;color:var(--ink);margin-bottom:6px}
+
+  /* Bottom bar */
+  .bottombar{
+    position:fixed;bottom:0;left:0;right:0;z-index:50;
+    background:rgba(255,255,255,.96);backdrop-filter:blur(8px);
+    border-top:1px solid var(--line);padding:10px 12px;
+    display:flex;gap:8px;max-width:640px;margin:0 auto
+  }
+  .bb{flex:1;border:none;border-radius:12px;padding:11px 4px;font-family:'Barlow';font-weight:700;font-size:12px;
+    cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;background:#eef1f4;color:var(--slate)}
+  .bb svg{width:20px;height:20px}
+  .bb.primary{background:var(--slate);color:#fff}
+  .bb:active{filter:brightness(.95)}
+
+  /* Modal */
+  .modal{position:fixed;inset:0;z-index:100;background:rgba(15,20,26,.55);display:none;align-items:flex-end;justify-content:center}
+  .modal.on{display:flex}
+  .sheet{background:#fff;width:100%;max-width:640px;border-radius:18px 18px 0 0;padding:18px 16px 22px;max-height:88vh;overflow:auto}
+  .sheet h3{font-family:'Barlow Semi Condensed';font-weight:800;font-size:22px;margin:0 0 6px}
+  .sheet p{color:var(--muted);font-size:14px;margin:0 0 12px;line-height:1.4}
+  .sheet textarea{width:100%;height:160px;border:1px solid var(--line);border-radius:12px;padding:12px;
+    font-family:'Barlow';font-size:14px;resize:vertical}
+  .sheet textarea:focus{outline:none;border-color:var(--blue)}
+  .mrow{display:flex;gap:10px;margin-top:14px}
+  .mbtn{flex:1;border:none;border-radius:12px;padding:14px;font-family:'Barlow';font-weight:700;font-size:15px;cursor:pointer}
+  .mbtn.ghost{background:#eef1f4;color:var(--slate)}
+  .mbtn.go{background:var(--slate);color:#fff}
+  .mbtn.danger{background:var(--red-bg);color:var(--red)}
+  .hint{background:#f6f8fa;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--muted);margin-top:12px;line-height:1.5}
+  .hint code{background:#fff;border:1px solid var(--line);padding:0 5px;border-radius:4px}
+
+  .toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--slate);color:#fff;padding:11px 18px;border-radius:999px;font-weight:600;font-size:14px;
+    opacity:0;pointer-events:none;transition:.25s;z-index:200;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* resaltar tarjeta al escanear */
+  .card.flash{animation:flash 1.7s ease}
+  @keyframes flash{0%,55%{box-shadow:0 0 0 3px var(--blue),var(--shadow)}100%{box-shadow:var(--shadow)}}
+
+  /* fila de búsqueda + botón escáner */
+  .searchrow{display:flex;gap:8px;align-items:stretch}
+  .searchrow .search{flex:1}
+  .scanbtn{flex:0 0 auto;width:52px;border:none;border-radius:12px;background:var(--slate);color:#fff;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow)}
+  .scanbtn:active{filter:brightness(.9)}
+  .scanbtn svg{width:24px;height:24px}
+
+  /* overlay del escáner */
+  .scanner{position:fixed;inset:0;z-index:150;background:#0c0f12;display:none;flex-direction:column}
+  .scanner.on{display:flex}
+  .scanhead{display:flex;align-items:center;justify-content:space-between;padding:16px;color:#fff;
+    font-family:'Barlow Semi Condensed';font-weight:800;font-size:18px}
+  .scanhead button{background:rgba(255,255,255,.14);color:#fff;border:none;width:38px;height:38px;border-radius:50%;font-size:18px;cursor:pointer}
+  .scanview{position:relative;flex:1;overflow:hidden;background:#000}
+  .scanview video{width:100%;height:100%;object-fit:cover}
+  .reticle{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:80%;max-width:420px;height:150px;
+    border:3px solid rgba(255,255,255,.92);border-radius:14px;box-shadow:0 0 0 9999px rgba(0,0,0,.4);pointer-events:none}
+  .reticle::after{content:"";position:absolute;left:6%;right:6%;top:50%;height:2px;background:#ff5b54;box-shadow:0 0 10px #ff5b54;animation:scanline 1.9s ease-in-out infinite}
+  @keyframes scanline{0%,100%{transform:translateY(-58px)}50%{transform:translateY(58px)}}
+  .scanfoot{padding:14px 16px calc(16px + env(safe-area-inset-bottom));background:#13171b;color:#fff}
+  .addone{display:flex;align-items:center;gap:11px;font-size:15px;margin-bottom:12px}
+  .addone input{width:22px;height:22px;accent-color:#1aa251}
+  .manual{display:flex;gap:8px}
+  .manual input{flex:1;padding:12px;border-radius:10px;border:1px solid #2a3138;background:#1c2127;color:#fff;font-size:16px;font-family:'Barlow'}
+  .manual input:focus{outline:none;border-color:var(--blue)}
+  .manual button{padding:0 18px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-weight:700;cursor:pointer;font-family:'Barlow'}
+  .scanerr{color:#ffb3af;font-size:14px;margin-top:12px;line-height:1.5;display:none}
+  .scanerr.on{display:block}
+
+  /* botón flotante de escaneo (siempre visible) */
+  .fab{position:fixed;right:16px;bottom:92px;z-index:60;width:60px;height:60px;border-radius:50%;
+    border:none;background:var(--green);color:#fff;box-shadow:0 8px 22px rgba(26,162,81,.45);
+    display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .fab:active{filter:brightness(.92);transform:scale(.95)}
+  .fab svg{width:28px;height:28px}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="htop">
+      <div class="brand">Recepción de Mercancía</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="saved" id="saved">✓ Guardado</div>
+        <button id="btnSettings" aria-label="Configuración" style="background:rgba(255,255,255,.12);border:none;color:#cdd6df;width:34px;height:34px;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H2a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 3.6 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H8a1.65 1.65 0 0 0 1-1.51V2a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V8a1.65 1.65 0 0 0 1.51 1H22a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+    </div>
+    <input class="ordno" id="ordName" placeholder="Nº de orden" />
+    <div class="odate">Fecha: <input type="date" id="ordDate"></div>
+    <div class="summary">
+      <div class="stat"><b id="stTotal">0</b><span>Ítems</span></div>
+      <div class="stat g"><b id="stDone">0</b><span>Completos</span></div>
+      <div class="stat y"><b id="stPend">0</b><span>Pendientes</span></div>
+      <div class="stat r"><b id="stShort">0</b><span>Uds. faltan</span></div>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="searchrow">
+      <div class="search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="search" placeholder="Buscar por código o descripción…" autocomplete="off">
+      </div>
+      <button class="scanbtn" id="btnScan" title="Escanear código de barras">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+      </button>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="list" id="list"></div>
+</div>
+
+<div class="bottombar">
+  <button class="bb primary" id="btnSend">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V8m0 0 4 4m-4-4-4 4"/><path d="M20 16.5A4.5 4.5 0 0 0 17.5 8h-1.3A7 7 0 1 0 4 14.5"/></svg>
+    Enviar a hoja
+  </button>
+  <button class="bb" id="btnImport">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+    Importar
+  </button>
+  <button class="bb" id="btnCopyRec">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+    Recibido
+  </button>
+  <button class="bb" id="btnCopyFalt">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+    Faltantes
+  </button>
+</div>
+
+<!-- Import modal -->
+<div class="modal" id="importModal">
+  <div class="sheet">
+    <h3>Importar pedido</h3>
+    <p>Copia desde tu hoja, en este orden, las columnas <b>Ítem (A)</b>, <b>Barra (C)</b>, <b>Descripción (E)</b> y <b>Cantidad (K)</b>. Una fila por producto.</p>
+    <textarea id="importText" placeholder="8880&#9;096619237432&#9;KIRKLAND OAT BEBIDA&#9;15&#10;6079&#9;846836007727&#9;SAL ROSADA HIMALAYA&#9;40"></textarea>
+    <div class="hint">
+      Pega directo desde Google Sheets. La <b>Barra (columna C)</b> es lo que conecta con tu hoja al enviar. Lo recibido se escribe en la columna <b>RECIBIDO (L)</b>.
+    </div>
+    <div class="mrow">
+      <button class="mbtn ghost" id="impCancel">Cancelar</button>
+      <button class="mbtn go" id="impGo">Cargar pedido</button>
+    </div>
+    <div class="mrow">
+      <button class="mbtn danger" id="impReset">Vaciar todo y empezar de cero</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div class="modal" id="cfgModal">
+  <div class="sheet">
+    <h3>Conexión con tu hoja</h3>
+    <p>Pega aquí el enlace del programa que instalaste en tu Google Sheet, y el nombre exacto de la pestaña donde se escribirá lo recibido.</p>
+    <label style="font-weight:600;font-size:14px;display:block;margin-bottom:5px">Enlace del programa (Web App)</label>
+    <input id="cfgUrl" placeholder="https://script.google.com/macros/s/.../exec"
+      style="width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font-family:'Barlow';font-size:14px;margin-bottom:14px">
+    <label style="font-weight:600;font-size:14px;display:block;margin-bottom:5px">Nombre exacto de la pestaña</label>
+    <input id="cfgTab" placeholder="ORDEN DE COMPRA 10000270 29-05-2026"
+      style="width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font-family:'Barlow';font-size:14px">
+    <div class="hint">Debe coincidir letra por letra con la pestaña de tu Google Sheet. Lo recibido se escribe en la columna <b>RECIBIDO (L)</b>, buscando cada producto por su <b>Barra (columna C)</b>.</div>
+    <div class="mrow">
+      <button class="mbtn ghost" id="cfgCancel">Cerrar</button>
+      <button class="mbtn go" id="cfgSave">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Scanner overlay -->
+<div class="scanner" id="scanner">
+  <div class="scanhead">
+    <span>Escanear código de barras</span>
+    <button id="scanClose" aria-label="Cerrar">✕</button>
+  </div>
+  <div class="scanview">
+    <video id="scanVideo" playsinline muted autoplay></video>
+    <div class="reticle"></div>
+  </div>
+  <div class="scanfoot">
+    <label class="addone"><input type="checkbox" id="scanAddOne"> Sumar +1 a lo recibido en cada escaneo</label>
+    <div class="manual">
+      <input id="manualCode" inputmode="numeric" placeholder="…o escribe el código a mano">
+      <button id="manualGo">Buscar</button>
+    </div>
+    <div class="scanerr" id="scanErr"></div>
+  </div>
+</div>
+
+<button class="fab" id="btnScanFab" title="Escanear">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+</button>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ---------- almacenamiento (persistente entre sesiones) ---------- */
+const KEY = "recepcion_pedido_v1";
+const CFG_KEY = "recepcion_cfg_v1";
+let memStore = {};
+
+let useLS = false;
+try{ const t="__test__"; localStorage.setItem(t,"1"); localStorage.removeItem(t); useLS=true; }catch(e){ useLS=false; }
+const hasStore = (typeof window !== "undefined" && window.storage && typeof window.storage.get === "function");
+
+async function getStore(key){
+  if(useLS){ try{ const r=localStorage.getItem(key); return r?JSON.parse(r):null; }catch(e){ return null; } }
+  if(hasStore){ try{ const r=await window.storage.get(key); return r?JSON.parse(r.value):null; }catch(e){ return null; } }
+  return memStore[key]||null;
+}
+async function setStore(key,val){
+  const data=JSON.stringify(val);
+  if(useLS){ try{ localStorage.setItem(key,data); return; }catch(e){} }
+  if(hasStore){ try{ await window.storage.set(key,data,false); return; }catch(e){} }
+  memStore[key]=val;
+}
+
+async function loadState(){ return await getStore(KEY); }
+let saveTimer=null;
+async function saveState(){ flashSaved(); await setStore(KEY, state); }
+function queueSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(saveState, 350); }
+
+/* configuración de sincronización con Google Sheets */
+let cfg = { url:"", tab:"" };
+async function loadCfg(){ const c=await getStore(CFG_KEY); if(c) cfg=c; }
+async function saveCfg(){ await setStore(CFG_KEY, cfg); }
+
+/* ---------- estado ---------- */
+let state = { name:"", date:"", items:[] };
+let filter = "all";
+let query = "";
+
+const SEED = {
+  name:"ORDEN DE COMPRA BODEGON 10000269",
+  date:"2026-05-23",
+  items:[
+    {c:"8880", b:"096619237432", d:"KIRKLAND SIGNATURE OAT BEBIDA DE AVENA ORGANICA NO LACTEA 946 ML 6 UNIDADES", e:15, r:null, o:""},
+    {c:"6079", b:"846836007727", d:"SAL ROSADA DEL HIMALAYA WELLSLEY 2.26 K", e:40, r:null, o:""},
+    {c:"8883", b:"846836070554", d:"KIRKLAND SIGNATURE SAL ROSADA MOLIDA 13 OZ 2 PACK", e:22, r:null, o:""},
+    {c:"19406", b:"021000054688", d:"KRAFT MAYONESA REALSINGLES SERVE 200 CT", e:60, r:60, o:""},
+    {c:"31614", b:"072940750871", d:"RED GOLD TOMATO KETCHUP SINGLE-SERVE PACK, 1000CT", e:289, r:289, o:"289 LOANA LORIA"},
+    {c:"25440", b:"613008742133", d:"ARIZONA VARIETY PACK 20 OZ / 24 UNIDADES", e:40, r:null, o:"5 LOANA"},
+    {c:"21190", b:"030772252116", d:"DETERGENTE TIDE PODS 3 EN 1 SPRING MEADOW 156 UNIDADES", e:40, r:40, o:""},
+    {c:"23948", b:"030772246603", d:"DETERGENTE TIDE PODS + ULTRA OXI ODOR ELIMINATOR 72 CAPSULAS", e:25, r:25, o:""},
+    {c:"4212", b:"041387102413", d:"TE EN POLVO 4C FRAMBUESA 2.34KG", e:60, r:null, o:""},
+    {c:"4857", b:"041387917857", d:"TE EN POLVO 4C LIMON 2.34KG", e:60, r:null, o:"5 SUGAREXPRESS-10 LOANA"},
+    {c:"4856", b:"041387102451", d:"TE EN POLVO 4C DURAZNO 2.34KG", e:42, r:null, o:"5 SUGAREXPRESS-10 LOANA"},
+    {c:"30864", b:"052000058864", d:"GATORADE SPORTS THIRST QUENCHER 20 OZ DE 24 PACK", e:30, r:null, o:""},
+    {c:"40224", b:"052000068023", d:"GATORADE LOWER SUGAR ELECTROLYTE BEVERAGE VARIETY PACK 12 OZ-24 UNDS", e:50, r:null, o:"2 SUGAREXPRESS-5 LOANA LORIA"},
+    {c:"37505", b:"889392002423", d:"CELSIUS LIFE FIT VIBE VARIETY PEACH/TROPICAL/RETRO PACK 12 OZ, 18 UND", e:43, r:null, o:"6 SUGAREXPRESS"},
+    {c:"40062", b:"070847900139", d:"MONSTER ENERGY ULTRA VARIETY PACK ZERO SUGAR 24/16 OZ", e:30, r:null, o:"7 SUGAREXPRESS - 10 LOANA - 2 VALTER NUÑEZ"},
+    {c:"4710", b:"070847003403", d:"MONSTER ENERGY ULTRA AZUL ZERO SUGAR 24 UNIDADES", e:19, r:null, o:"14 VALTER NUÑEZ"},
+    {c:"33791", b:"070847898603", d:"MONSTER ENERGY ULTRA ZERO SUGAR VARIETY PACK 24 UND 473ML", e:20, r:null, o:"8 LOANA LORIA - 2 VALTER NUÑEZ"},
+    {c:"12342", b:"030000623619", d:"PEARL MILLING COMPANY SYRUP ORIGINAL 64 OZ / 1.89 L", e:78, r:null, o:""},
+    {c:"40225", b:"643843805342", d:"PREMIER PROTEIN 30G COFFEEHOUSE VARIETY PACK, 11.5 OZ - 12 UNDS", e:8, r:null, o:""},
+    {c:"7350", b:"643843718314", d:"BATIDO PROTEINICO DE CHOCOLATE PREMIER 15 UNIDADES", e:20, r:null, o:""},
+    {c:"21149", b:"643843718307", d:"BATIDO PROTEINICO DE CARAMELO 15 UNIDADES", e:20, r:null, o:""},
+    {c:"7348", b:"643843720461", d:"BATIDO PROTEINICO DE VAINILLA PREMIER 15 UNIDADES", e:20, r:null, o:""}
+  ]
+};
+
+/* ---------- utilidades ---------- */
+const $ = s => document.querySelector(s);
+function statusOf(it){
+  if(it.r===null||it.r==="") return "pend";
+  if(+it.r === +it.e) return "done";
+  if(+it.r < +it.e) return "short";
+  return "over";
+}
+function matchesQuery(it){
+  if(!query) return true;
+  const q=query.toLowerCase();
+  return (it.d||"").toLowerCase().includes(q) || (it.c||"").toLowerCase().includes(q) || (it.b||"").toLowerCase().includes(q);
+}
+function matchesFilter(it){
+  if(filter==="all") return true;
+  return statusOf(it)===filter;
+}
+
+/* ---------- render ---------- */
+function render(){
+  $("#ordName").value = state.name||"";
+  $("#ordDate").value = state.date||"";
+
+  const items = state.items;
+  let done=0, pend=0, shortUnits=0;
+  items.forEach(it=>{
+    const s=statusOf(it);
+    if(s==="done"||s==="over") done++;
+    if(s==="pend") pend++;
+    if(s!=="pend" && +it.r < +it.e) shortUnits += (+it.e - +it.r);
+  });
+  $("#stTotal").textContent=items.length;
+  $("#stDone").textContent=done;
+  $("#stPend").textContent=pend;
+  $("#stShort").textContent=shortUnits;
+
+  const counts={all:items.length,pend:0,short:0,done:0,over:0};
+  items.forEach(it=>counts[statusOf(it)]++);
+  const chipDefs=[["all","Todos"],["pend","Pendientes"],["short","Con faltante"],["done","Completos"],["over","De más"]];
+  $("#chips").innerHTML = chipDefs.map(([k,l])=>{
+    const n = k==="all"?items.length:counts[k];
+    return `<button class="chip ${filter===k?'active':''}" data-f="${k}">${l}<span class="n">${n}</span></button>`;
+  }).join("");
+
+  const visible = items.map((it,i)=>({it,i})).filter(o=>matchesFilter(o.it)&&matchesQuery(o.it));
+  if(visible.length===0){
+    $("#list").innerHTML = `<div class="empty"><b>Nada por aquí</b>${items.length===0?'Toca "Importar pedido" para cargar tu orden.':'Prueba con otro filtro o búsqueda.'}</div>`;
+    return;
+  }
+  $("#list").innerHTML = visible.map(({it,i})=>{
+    const s=statusOf(it);
+    const diff = (it.r===null||it.r==="")?null:(+it.r - +it.e);
+    let badge="";
+    if(s==="done") badge=`<span class="badge done">✓ Completo</span>`;
+    else if(s==="short") badge=`<span class="badge short">Faltan ${Math.abs(diff)}</span>`;
+    else if(s==="over") badge=`<span class="badge over">Sobran ${diff}</span>`;
+    else badge=`<span class="badge pend">Sin revisar</span>`;
+    const recVal = (it.r===null||it.r==="")?"":it.r;
+    return `
+    <div class="card s-${s}" data-card="${i}">
+      <div class="cbody">
+        <div class="desc">${esc(it.d)}</div>
+        <div class="meta">
+          ${it.c?`<span>Ítem <code>${esc(it.c)}</code></span>`:""}
+          ${it.b?`<span>Barra <code>${esc(it.b)}</code></span>`:""}
+        </div>
+        <div class="row2">
+          <div class="exp"><div class="lab">Esperado</div><div class="v">${it.e}</div></div>
+          <div class="stepper">
+            <button class="minus" data-act="dec" data-i="${i}">−</button>
+            <input type="number" inputmode="numeric" data-act="set" data-i="${i}" value="${recVal}" class="${recVal===""?'empty':''}" placeholder="0">
+            <button class="plus" data-act="inc" data-i="${i}">+</button>
+          </div>
+          <button class="done-btn" data-act="full" data-i="${i}">✓ Completo</button>
+        </div>
+        ${badge}
+        <div class="obs"><input data-act="obs" data-i="${i}" value="${esc(it.o||'')}" placeholder="Observación (opcional)…"></div>
+      </div>
+    </div>`;
+  }).join("");
+}
+function esc(s){return (s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+/* ---------- interacción ---------- */
+function setRec(i,val){
+  if(val===""||val===null){ state.items[i].r=null; }
+  else { let n=parseInt(val,10); if(isNaN(n)||n<0)n=0; state.items[i].r=n; }
+  queueSave();
+}
+
+document.addEventListener("click",e=>{
+  const chip=e.target.closest(".chip");
+  if(chip){ filter=chip.dataset.f; render(); return; }
+  const btn=e.target.closest("[data-act]");
+  if(!btn) return;
+  const act=btn.dataset.act, i=+btn.dataset.i;
+  if(act==="inc"){ const cur=(state.items[i].r===null?0:+state.items[i].r); setRec(i,cur+1); render(); }
+  if(act==="dec"){ const cur=(state.items[i].r===null?0:+state.items[i].r); setRec(i,Math.max(0,cur-1)); render(); }
+  if(act==="full"){ setRec(i,state.items[i].e); render(); }
+});
+document.addEventListener("input",e=>{
+  const el=e.target.closest("[data-act]");
+  if(!el) return;
+  const act=el.dataset.act, i=el.dataset.i!=null?+el.dataset.i:null;
+  if(act==="set"){ setRec(i,el.value); }
+  if(act==="obs"){ state.items[i].o=el.value; queueSave(); }
+});
+document.addEventListener("blur",e=>{
+  const el=e.target.closest('[data-act="set"]');
+  if(el) render();
+}, true);
+
+$("#search").addEventListener("input",e=>{ query=e.target.value; render(); });
+$("#ordName").addEventListener("input",e=>{ state.name=e.target.value; queueSave(); });
+$("#ordDate").addEventListener("change",e=>{ state.date=e.target.value; queueSave(); });
+
+/* ---------- importar ---------- */
+$("#btnImport").addEventListener("click",()=>$("#importModal").classList.add("on"));
+$("#impCancel").addEventListener("click",()=>$("#importModal").classList.remove("on"));
+$("#importModal").addEventListener("click",e=>{ if(e.target.id==="importModal") $("#importModal").classList.remove("on"); });
+
+function parseImport(text){
+  const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  const items=[];
+  for(const line of lines){
+    let parts;
+    if(line.includes("\t")) parts=line.split("\t");
+    else if(line.includes("|")) parts=line.split("|");
+    else if(line.includes(",")) parts=line.split(",");
+    else parts=[line];
+    parts=parts.map(p=>p.trim());
+    const joined=line.toUpperCase();
+    if(joined.includes("DESCRIPCION")||joined.includes("DESCRIPCIÓN")||joined.includes("BOLEITA")) continue;
+    // cantidad: último campo numérico corto (<=6 dígitos)
+    let qty=null, qtyIdx=-1;
+    for(let k=parts.length-1;k>=0;k--){
+      const raw=parts[k].replace(/[^0-9.\-]/g,"");
+      if(raw!==""&&!isNaN(parseFloat(raw))&&raw.replace(/\D/g,"").length<=6){ qty=Math.round(parseFloat(raw)); qtyIdx=k; break; }
+    }
+    if(qty===null) continue;
+    const rest=parts.filter((_,k)=>k!==qtyIdx);
+    // descripción = campo con letras (el más largo); barra = campo solo dígitos de 8+; ítem = primer campo restante
+    let desc="", barcode="", code="";
+    let descIdx=-1, maxLen=-1;
+    rest.forEach((f,k)=>{ if(/[a-zA-ZÀ-ÿ]/.test(f) && f.length>maxLen){ maxLen=f.length; descIdx=k; } });
+    if(descIdx>=0) desc=rest[descIdx];
+    rest.forEach((f,k)=>{ if(k!==descIdx && /^\d{8,}$/.test(f.replace(/\D/g,"")) ) barcode=f.replace(/\D/g,""); });
+    const codeCand=rest.find((f,k)=> k!==descIdx && f!==barcode && f!=="");
+    if(codeCand) code=codeCand;
+    if(!desc) desc="(sin descripción)";
+    items.push({c:code, b:barcode, d:desc, e:qty, r:null, o:""});
+  }
+  return items;
+}
+
+$("#impGo").addEventListener("click",()=>{
+  const items=parseImport($("#importText").value);
+  if(items.length===0){ toast("No pude leer productos. Revisa el formato."); return; }
+  state={ name:state.name||"Nuevo pedido", date:state.date||new Date().toISOString().slice(0,10), items };
+  $("#importText").value="";
+  $("#importModal").classList.remove("on");
+  filter="all"; query=""; $("#search").value="";
+  render(); saveState();
+  toast(items.length+" productos cargados");
+});
+$("#impReset").addEventListener("click",()=>{
+  state={name:"Nuevo pedido",date:new Date().toISOString().slice(0,10),items:[]};
+  $("#importText").value="";
+  $("#importModal").classList.remove("on");
+  render(); saveState();
+  toast("Listo, todo vacío");
+});
+
+/* ---------- copiar resultados ---------- */
+$("#btnCopyRec").addEventListener("click",()=>{
+  const txt=state.items.map(it=>(it.r===null||it.r==="")?"":it.r).join("\n");
+  copy(txt,"Recibidos copiados — pégalos en la columna RECIBIDO");
+});
+$("#btnCopyFalt").addEventListener("click",()=>{
+  const falt=state.items.filter(it=>{const s=statusOf(it);return s==="short"||s==="pend";});
+  if(falt.length===0){ toast("¡No hay faltantes! Todo cuadra."); return; }
+  const head=`FALTANTES — ${state.name||""}\n`;
+  const body=falt.map(it=>{
+    const rec=(it.r===null||it.r==="")?0:+it.r;
+    const f=(+it.e)-rec;
+    return `• ${it.d} — esperado ${it.e}, recibido ${rec}, faltan ${f}`;
+  }).join("\n");
+  copy(head+body,"Resumen de faltantes copiado");
+});
+function copy(text,msg){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>toast(msg)).catch(()=>fallbackCopy(text,msg));
+  } else fallbackCopy(text,msg);
+}
+function fallbackCopy(text,msg){
+  const ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta);
+  ta.select(); try{document.execCommand("copy");toast(msg);}catch(e){toast("No se pudo copiar");}
+  document.body.removeChild(ta);
+}
+
+/* ---------- configuración + envío a Google Sheets ---------- */
+$("#btnSettings").addEventListener("click",openSettings);
+$("#cfgCancel").addEventListener("click",()=>$("#cfgModal").classList.remove("on"));
+$("#cfgModal").addEventListener("click",e=>{ if(e.target.id==="cfgModal") $("#cfgModal").classList.remove("on"); });
+function openSettings(){
+  $("#cfgUrl").value = cfg.url||"";
+  $("#cfgTab").value = cfg.tab||state.name||"";
+  $("#cfgModal").classList.add("on");
+}
+$("#cfgSave").addEventListener("click",()=>{
+  cfg.url = $("#cfgUrl").value.trim();
+  cfg.tab = $("#cfgTab").value.trim();
+  saveCfg();
+  $("#cfgModal").classList.remove("on");
+  toast("Conexión guardada");
+});
+
+$("#btnSend").addEventListener("click",sendToSheet);
+async function sendToSheet(){
+  if(!cfg.url){ openSettings(); toast("Primero pega el enlace de tu hoja"); return; }
+  const tab = cfg.tab || state.name || "";
+  const items = state.items
+    .filter(it=> it.r!==null && it.r!=="")
+    .map(it=>({ code: String(it.b||"").trim(), recibido: +it.r }));  // ← usa BARRA (it.b)
+  if(items.length===0){ toast("No hay recibidos para enviar todavía"); return; }
+  if(items.some(it=>!it.code)){ toast("Falta la Barra en algún producto — impórtalo con la columna C"); }
+  const payload = { sheet:tab, order:state.name, items };
+  toast("Enviando…");
+  try{
+    await fetch(cfg.url, {
+      method:"POST", mode:"no-cors",
+      headers:{ "Content-Type":"text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+    toast("✓ Enviado — revisa la columna RECIBIDO de tu hoja");
+  }catch(err){
+    toast("No se pudo enviar. Revisa el enlace y tu internet.");
+  }
+}
+
+/* ---------- toast & guardado ---------- */
+let toastTimer=null;
+function toast(msg){
+  const t=$("#toast"); t.textContent=msg; t.classList.add("on");
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("on"),2200);
+}
+let savedTimer=null;
+function flashSaved(){
+  const s=$("#saved"); s.classList.add("on");
+  clearTimeout(savedTimer); savedTimer=setTimeout(()=>s.classList.remove("on"),1400);
+}
+
+/* ---------- escáner de código de barras ---------- */
+const scan = { active:false, mode:null, stream:null, interval:null, reader:null, cooldownUntil:0, lastMiss:"" };
+
+function normCode(s){ return String(s||"").replace(/\D/g,"").replace(/^0+/,""); }
+function barcodeMatch(stored, scanned){
+  const a=normCode(stored), b=normCode(scanned);
+  if(!a||!b) return false;
+  if(a===b) return true;
+  return a.endsWith(b) || b.endsWith(a);
+}
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    const s=document.createElement("script"); s.src=src;
+    s.onload=res; s.onerror=()=>rej(new Error("no se pudo cargar el lector"));
+    document.head.appendChild(s);
+  });
+}
+function showScanErr(msg){ const e=$("#scanErr"); e.innerHTML=msg; e.classList.add("on"); }
+
+async function openScanner(){
+  $("#scanErr").classList.remove("on");
+  $("#scanner").classList.add("on");
+  scan.active=true; scan.lastMiss="";
+  const video=$("#scanVideo");
+  try{
+    if("BarcodeDetector" in window){
+      const formats=["ean_13","ean_8","upc_a","upc_e","code_128","code_39","itf"];
+      let det;
+      try{ const sup=await BarcodeDetector.getSupportedFormats(); det=new BarcodeDetector({formats:formats.filter(f=>sup.includes(f))}); }
+      catch(_){ det=new BarcodeDetector(); }
+      scan.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
+      video.srcObject=scan.stream; await video.play();
+      scan.mode="native";
+      scan.interval=setInterval(async()=>{
+        if(!scan.active) return;
+        try{ const codes=await det.detect(video); if(codes&&codes.length) handleScan(codes[0].rawValue); }catch(_){}
+      },300);
+      return;
+    }
+    if(!window.ZXing){ await loadScript("https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"); }
+    scan.reader=new ZXing.BrowserMultiFormatReader();
+    scan.mode="zxing";
+    await scan.reader.decodeFromConstraints({video:{facingMode:"environment"}}, video, (result)=>{
+      if(result && scan.active) handleScan(result.getText());
+    });
+  }catch(err){
+    let msg="No pude abrir la cámara. ";
+    if(err && /NotAllowed|Permission/i.test(err.name+err.message)) msg+="Hay que dar permiso de cámara al navegador.";
+    else if(err && /NotFound/i.test(err.name)) msg+="No se encontró ninguna cámara.";
+    else msg+="Si lo abriste dentro de una vista previa, mejor abre el archivo en una pestaña del navegador (Chrome/Safari) y vuelve a intentar.";
+    msg+="<br><br>Mientras tanto puedes escribir el código a mano abajo.";
+    showScanErr(msg);
+  }
+}
+function stopCamera(){
+  scan.active=false;
+  if(scan.interval){ clearInterval(scan.interval); scan.interval=null; }
+  if(scan.reader){ try{ scan.reader.reset(); }catch(_){} scan.reader=null; }
+  if(scan.stream){ scan.stream.getTracks().forEach(t=>t.stop()); scan.stream=null; }
+  const v=$("#scanVideo"); if(v){ v.srcObject=null; }
+}
+function closeScanner(){ stopCamera(); $("#scanner").classList.remove("on"); }
+
+function handleScan(raw){
+  const now=Date.now();
+  if(now < scan.cooldownUntil) return;
+  const idx=state.items.findIndex(it=>barcodeMatch(it.b, raw));
+  const addOne=$("#scanAddOne").checked;
+  if(idx<0){
+    const code=normCode(raw);
+    if(scan.lastMiss!==code){ scan.lastMiss=code; if(navigator.vibrate) navigator.vibrate([40,40,40]); toast("No está en el pedido: "+code); }
+    scan.cooldownUntil=now+1200;
+    return;
+  }
+  scan.lastMiss="";
+  scan.cooldownUntil=now+1400;
+  if(navigator.vibrate) navigator.vibrate(70);
+  if(addOne){
+    const cur=(state.items[idx].r===null?0:+state.items[idx].r);
+    setRec(idx, cur+1);
+    toast("+1 → "+state.items[idx].d.slice(0,32)+" ("+state.items[idx].r+"/"+state.items[idx].e+")");
+  }else{
+    closeScanner();
+    filter="all"; query=""; $("#search").value="";
+    render();
+    highlightCard(idx);
+    toast("✓ "+state.items[idx].d.slice(0,40));
+  }
+}
+function highlightCard(idx){
+  requestAnimationFrame(()=>{
+    const el=document.querySelector('[data-card="'+idx+'"]');
+    if(!el) return;
+    el.scrollIntoView({behavior:"smooth",block:"center"});
+    el.classList.add("flash");
+    setTimeout(()=>el.classList.remove("flash"),1700);
+  });
+}
+
+$("#btnScan").addEventListener("click",openScanner);
+$("#btnScanFab").addEventListener("click",openScanner);
+$("#scanClose").addEventListener("click",closeScanner);
+$("#manualGo").addEventListener("click",()=>{
+  const v=$("#manualCode").value.trim(); if(!v) return;
+  handleScan(v); $("#manualCode").value="";
+});
+$("#manualCode").addEventListener("keydown",e=>{ if(e.key==="Enter"){ $("#manualGo").click(); } });
+document.addEventListener("visibilitychange",()=>{ if(document.hidden && scan.stream) stopCamera(); });
+
+/* ---------- arranque ---------- */
+(async function init(){
+  await loadCfg();
+  const saved=await loadState();
+  state = (saved && saved.items) ? saved : JSON.parse(JSON.stringify(SEED));
+  render();
+})();
+</script>
