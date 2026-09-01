@@ -434,6 +434,7 @@ async function saveCfg(){ await setStore(CFG_KEY, cfg); }
 
 /* ---------- estado ---------- */
 let state = { name:"", date:"", items:[] };
+let pendingBarcode = "";   // barra escaneada que no está en el pedido, esperando dueño
 let filter = "all";
 let query = "";
 
@@ -510,12 +511,19 @@ function render(){
     return `<button class="chip ${filter===k?'active':''}" data-f="${k}">${l}<span class="n">${n}</span></button>`;
   }).join("");
 
+  const aviso = pendingBarcode
+    ? `<div style="margin-bottom:10px;padding:11px 12px;border-radius:10px;background:#fff4d6;border:1px solid #e0a800;color:#8a5a00;font-size:13px;line-height:1.5">
+         La barra <b>${esc(pendingBarcode)}</b> no está en el pedido. Busca abajo el producto al que pertenece y toca <b>Asignarle la barra</b>.
+         <button data-act="cancelbarra" style="display:block;margin-top:8px;background:none;border:1px solid #e0a800;color:#8a5a00;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700">✕ Descartar</button>
+       </div>`
+    : "";
+
   const visible = items.map((it,i)=>({it,i})).filter(o=>matchesFilter(o.it)&&matchesQuery(o.it));
   if(visible.length===0){
-    $("#list").innerHTML = `<div class="empty"><b>Nada por aquí</b>${items.length===0?'Toca "Importar pedido" para cargar tu orden.':'Prueba con otro filtro o búsqueda.'}</div>`;
+    $("#list").innerHTML = aviso + `<div class="empty"><b>Nada por aquí</b>${items.length===0?'Toca "Importar pedido" para cargar tu orden.':'Prueba con otro filtro o búsqueda.'}</div>`;
     return;
   }
-  $("#list").innerHTML = visible.map(({it,i})=>{
+  $("#list").innerHTML = aviso + visible.map(({it,i})=>{
     const s=statusOf(it);
     const diff = (it.r===null||it.r==="")?null:(+it.r - +it.e);
     let badge="";
@@ -524,6 +532,15 @@ function render(){
     else if(s==="over") badge=`<span class="badge over">Sobran ${diff}</span>`;
     else badge=`<span class="badge pend">Sin revisar</span>`;
     const recVal = (it.r===null||it.r==="")?"":it.r;
+    const notaQty = it.qn
+      ? `<div style="margin:6px 0;padding:7px 10px;border-radius:8px;background:#fff4d6;border:1px solid #e0a800;color:#8a5a00;font-size:13px;font-weight:700">⚠ ${esc(it.e)} marcadas como "${esc(it.qn)}"</div>`
+      : "";
+    const barraNueva = it.bn
+      ? `<div style="margin:6px 0;padding:7px 10px;border-radius:8px;background:#e6f4ff;border:1px solid #4da3ff;color:#0b4f8a;font-size:13px;font-weight:700">🔄 Barra nueva por enviar: ${esc(it.bn)}</div>`
+      : "";
+    const btnAsignar = pendingBarcode
+      ? `<button data-act="setbarra" data-i="${i}" style="width:100%;margin-top:8px;padding:10px;border:none;border-radius:9px;background:#0b4f8a;color:#fff;font-weight:700;font-size:14px">🔗 Asignarle la barra ${esc(pendingBarcode)}</button>`
+      : "";
     return `
     <div class="card s-${s}" data-card="${i}">
       <div class="cbody">
@@ -532,6 +549,7 @@ function render(){
           ${it.c?`<span>Ítem <code>${esc(it.c)}</code></span>`:""}
           ${it.b?`<span>Barra <code>${esc(it.b)}</code></span>`:""}
         </div>
+        ${notaQty}${barraNueva}
         <div class="row2">
           <div class="exp"><div class="lab">Esperado</div><div class="v">${it.e}</div></div>
           <div class="stepper">
@@ -550,6 +568,7 @@ function render(){
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
           </button>
         </div>
+        ${btnAsignar}
       </div>
     </div>`;
   }).join("");
@@ -574,6 +593,19 @@ document.addEventListener("click",e=>{
   if(act==="full"){ setRec(i,state.items[i].e); render(); }
   if(act==="calc"){ openCalc(i); }
   if(act==="buscan"){ openScannerForBU(i); }
+  if(act==="cancelbarra"){ pendingBarcode=""; render(); toast("Barra descartada"); }
+  if(act==="setbarra"){
+    const it=state.items[i];
+    const anterior = it.b ? it.b : "(sin barra)";
+    if(!confirm("Producto:\n"+it.d+"\n\nBarra actual: "+anterior+"\nBarra nueva:  "+pendingBarcode+"\n\n¿Asignársela?")) return;
+    if(state.items.some((x,k)=>k!==i && (barcodeMatch(x.b,pendingBarcode)||barcodeMatch(x.bn,pendingBarcode)))){
+      toast("Esa barra ya la tiene otro producto del pedido"); return;
+    }
+    it.bn = pendingBarcode;
+    pendingBarcode="";
+    queueSave(); render(); highlightCard(i);
+    toast("Barra asignada — se escribirá al enviar a la hoja");
+  }
 });
 document.addEventListener("input",e=>{
   const el=e.target.closest("[data-act]");
@@ -700,14 +732,22 @@ function parseImport(text){
     const barraUnidad = extractBarcode(parts[COL_BU_IDX]);
     const desc    = stripCellQuotes(parts[COL_DESC_IDX]||"").trim();
     const obs     = stripCellQuotes(parts[COL_OBS_IDX]||"").trim();
-    const rawQty  = (parts[COL_QTY_IDX]||"").replace(/[^0-9.\-]/g,"");
-    let qty = null;
-    if(rawQty!=="" && !isNaN(parseFloat(rawQty))) qty = Math.round(parseFloat(rawQty));
+
+    // La celda de cantidad a veces trae texto pegado: "(24 VENDIDOS JEQUE)",
+    // "3 VENDIDOS", "15(4 SUGARExPRESS)". Tomamos SOLO el primer número y
+    // guardamos el resto como nota, en vez de borrar las letras y pegar los
+    // dígitos sueltos (eso convertía 15(4 ...) en 154).
+    const qtyCell = stripCellQuotes(parts[COL_QTY_IDX]||"").trim();
+    const qm = qtyCell.match(/\d+([.,]\d+)?/);
+    let qty = qm ? Math.round(parseFloat(qm[0].replace(",","."))) : null;
+    const qtyNota = qm
+      ? qtyCell.replace(/\d+([.,]\d+)?/,"").replace(/[()\[\]\-_.]/g," ").replace(/\s+/g," ").trim()
+      : "";
 
     if(qty===null) continue;
     if(!desc && !code && !barcode) continue;
 
-    items.push({c:code, b:barcode, bu:barraUnidad, d: desc||"(sin descripción)", e:qty, r:null, o:obs});
+    items.push({c:code, b:barcode, bu:barraUnidad, d: desc||"(sin descripción)", e:qty, r:null, o:obs, qn:qtyNota});
   }
   return items;
 }
@@ -846,14 +886,16 @@ async function sendToSheet(){
   if(!cfg.url){ openSettings(); toast("Primero pega el enlace de tu hoja"); return; }
   const tab = cfg.tab || state.name || "";
   const items = state.items
-    .filter(it=> (it.r!==null && it.r!=="") || (it.bu && it.bu.trim()!==""))
+    .filter(it=> (it.r!==null && it.r!=="") || (it.bu && it.bu.trim()!=="") || (it.bn && it.bn.trim()!==""))
     .map(it=>({
-      code: String(it.b||"").trim(),                          // Barra (clave de búsqueda)
-      recibido: (it.r!==null && it.r!=="") ? +it.r : null,     // cantidad recibida (o null si solo se actualiza la barra unidad)
-      barraUnidad: (it.bu||"").trim() || null                  // Barra Unidad (o null si no se capturó)
+      code: String(it.b||"").trim(),                          // Barra actual en la hoja (clave de búsqueda)
+      desc: String(it.d||"").trim(),                          // respaldo si el producto no tiene barra en la hoja
+      recibido: (it.r!==null && it.r!=="") ? +it.r : null,     // cantidad recibida (o null si solo se actualiza una barra)
+      barraUnidad: (it.bu||"").trim() || null,                 // Barra Unidad (o null si no se capturó)
+      barraNueva: (it.bn||"").trim() || null                   // Barra Empaque nueva o corregida
     }));
-  if(items.length===0){ toast("No hay recibidos ni barras unidad para enviar todavía"); return; }
-  if(items.some(it=>!it.code)){ toast("Falta la Barra en algún producto — impórtalo con la columna C"); }
+  if(items.length===0){ toast("No hay recibidos ni barras para enviar todavía"); return; }
+  if(items.some(it=>!it.code && !it.desc)){ toast("Falta la Barra en algún producto — impórtalo con la columna C"); }
   const payload = { sheet:tab, order:state.name, items };
   toast("Enviando…");
   try{
@@ -961,12 +1003,17 @@ function handleScan(raw){
     return;
   }
 
-  const idx=state.items.findIndex(it=>barcodeMatch(it.b, raw));
+  const idx=state.items.findIndex(it=>barcodeMatch(it.b, raw)||barcodeMatch(it.bn, raw));
   const addOne=$("#scanAddOne").checked;
   if(idx<0){
     const code=normCode(raw);
-    if(scan.lastMiss!==code){ scan.lastMiss=code; if(navigator.vibrate) navigator.vibrate([40,40,40]); toast("No está en el pedido: "+code); }
+    pendingBarcode = code;
     scan.cooldownUntil=now+1200;
+    if(navigator.vibrate) navigator.vibrate([40,40,40]);
+    closeScanner();
+    filter="all"; query=""; $("#search").value="";
+    render();
+    toast("No está en el pedido: "+code+" — búscalo por descripción");
     return;
   }
   scan.lastMiss="";
