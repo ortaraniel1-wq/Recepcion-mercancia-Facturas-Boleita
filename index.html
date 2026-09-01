@@ -302,6 +302,15 @@
 <div class="modal" id="importModal">
   <div class="sheet">
     <h3>Importar pedido</h3>
+
+    <div style="border:1px solid #4da3ff;background:#eef6ff;border-radius:10px;padding:12px;margin-bottom:14px">
+      <div style="font-weight:800;color:#0b4f8a;margin-bottom:4px">Cargar directo desde la hoja</div>
+      <div style="font-size:13px;color:#33506b;line-height:1.45;margin-bottom:9px">Escribe el nombre de la pestaña y la app trae los productos sola, sin pegar nada.</div>
+      <input id="pullTab" type="text" placeholder="Ej: ORDEN DE COMPRA BODEGON 10000277" style="width:100%;padding:11px;border:1px solid #b9d6f5;border-radius:8px;font-size:15px;margin-bottom:8px">
+      <button class="mbtn go" id="impPull" style="width:100%">⬇ Cargar desde la hoja</button>
+    </div>
+
+    <div style="font-weight:800;margin-bottom:6px">…o pegar a mano</div>
     <p>Selecciona en tu hoja el rango <b>desde la columna A hasta la K</b> (sin la fila de títulos), todas las filas de productos, y pégalo aquí. El orden de columnas debe ser siempre: A=ÍTEM, B=Código Boleita, C=Barra Empaque, D=Barra Unidad, E=Descripción, F-H=(no se usan), I=Observación, J=Boleita Tienda, K=Recibido.</p>
     <textarea id="importText" placeholder="8880&#9;X&#9;096619237432&#9;&#9;KIRKLAND OAT BEBIDA&#9;&#9;&#9;&#9;4 LOANA&#9;15&#9;"></textarea>
     <div class="hint">
@@ -625,7 +634,44 @@ $("#ordName").addEventListener("input",e=>{ state.name=e.target.value; queueSave
 $("#ordDate").addEventListener("change",e=>{ state.date=e.target.value; queueSave(); });
 
 /* ---------- importar ---------- */
-$("#btnImport").addEventListener("click",()=>$("#importModal").classList.add("on"));
+$("#btnImport").addEventListener("click",()=>{
+  $("#pullTab").value = cfg.tab || state.name || "";
+  $("#importModal").classList.add("on");
+});
+
+/* ---- cargar el pedido directo desde la hoja (sin pegar) ---- */
+$("#impPull").addEventListener("click", async ()=>{
+  const tab = $("#pullTab").value.trim();
+  if(!cfg.url){ $("#importModal").classList.remove("on"); openSettings(); toast("Primero pega el enlace de tu hoja"); return; }
+  if(!tab){ toast("Escribe el nombre de la pestaña"); return; }
+  const btn=$("#impPull"); btn.disabled=true; btn.textContent="Cargando…";
+  try{
+    const r = await fetch(cfg.url + "?hoja=" + encodeURIComponent(tab));
+    const res = await r.json();
+    if(!res.ok){ toast(res.error || "No se pudo leer la hoja"); return; }
+    const items = (res.items||[]).map(it=>({
+      c:  String(it.item||"").trim(),
+      b:  String(it.barra||"").replace(/\D/g,""),
+      bu: String(it.barraUnidad||"").replace(/\D/g,""),
+      d:  it.descripcion || "(sin descripción)",
+      e:  Number(it.esperado)||0,
+      r:  (Number(it.recibido)>0) ? Number(it.recibido) : null,
+      o:  String(it.observacion||"").trim(),
+      qn: String(it.notaEsperado||"").trim()
+    })).filter(it=> it.b || it.d!=="(sin descripción)");
+    if(items.length===0){ toast("Esa pestaña no trajo productos"); return; }
+    cfg.tab = res.hoja || tab; saveCfg();
+    state = { name: res.hoja || tab, date: state.date || new Date().toISOString().slice(0,10), items };
+    pendingBarcode=""; filter="all"; query=""; $("#search").value="";
+    $("#importModal").classList.remove("on");
+    render(); saveState();
+    toast(items.length+" productos · esperado según "+(res.columnaEsperado||"la columna previa a RECIBIDO"));
+  }catch(e){
+    toast("Sin conexión con la hoja");
+  }finally{
+    btn.disabled=false; btn.textContent="⬇ Cargar desde la hoja";
+  }
+});
 $("#impCancel").addEventListener("click",()=>$("#importModal").classList.remove("on"));
 $("#importModal").addEventListener("click",e=>{ if(e.target.id==="importModal") $("#importModal").classList.remove("on"); });
 
